@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { io, Socket } from 'socket.io-client'
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Users, CheckCircle, Loader2 } from 'lucide-react'
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Users, CheckCircle, Loader2, UserPlus, X, Check } from 'lucide-react'
 import { BASE_URL, API_URL } from '../services/api'
 
 const SIGNALING_SERVER_URL = BASE_URL
@@ -34,6 +34,11 @@ export function MeetingRoom() {
     const [isProcessing, setIsProcessing] = useState(false)
     const [processingMessage, setProcessingMessage] = useState('')
     const [hasEnded, setHasEnded] = useState(false)
+
+    // Host & Waiting Room state
+    const [isHost, setIsHost] = useState(false)
+    const [waitingUsers, setWaitingUsers] = useState<Array<{ socketId: string; userName: string }>>([])
+    const [showWaitingPanel, setShowWaitingPanel] = useState(false)
 
     // Refs
     const localStreamRef = useRef<MediaStream | null>(null)
@@ -108,6 +113,23 @@ export function MeetingRoom() {
 
             socketRef.current.on('user-disconnected', (socketId: string) => {
                 handleUserDisconnected(socketId)
+            })
+
+            // Waiting Room: Host notifications
+            socketRef.current.on('you-are-host', ({ isHost: hostStatus }) => {
+                console.log('[Waiting Room] Host status:', hostStatus)
+                setIsHost(hostStatus)
+            })
+
+            socketRef.current.on('new-join-request', ({ userName, waitingUsers: users }) => {
+                console.log(`[Waiting Room] New join request from ${userName}`)
+                setWaitingUsers(users)
+                setShowWaitingPanel(true)
+            })
+
+            socketRef.current.on('waiting-list-update', ({ waitingUsers: users }) => {
+                console.log('[Waiting Room] Waiting list updated:', users)
+                setWaitingUsers(users)
             })
 
             console.log(`Joined room ${meetingId} as ${userId.current} `)
@@ -312,6 +334,20 @@ export function MeetingRoom() {
         setHasEnded(true);
     }
 
+    // Host: Approve a user from waiting room
+    const approveUser = (targetSocketId: string) => {
+        if (socketRef.current) {
+            socketRef.current.emit('approve-user', { roomId: meetingId, targetSocketId })
+        }
+    }
+
+    // Host: Reject a user from waiting room
+    const rejectUser = (targetSocketId: string) => {
+        if (socketRef.current) {
+            socketRef.current.emit('reject-user', { roomId: meetingId, targetSocketId })
+        }
+    }
+
     const cleanupMeeting = () => {
         forceStopResources();
     }
@@ -359,15 +395,70 @@ export function MeetingRoom() {
             <div className="flex items-center justify-between px-6 h-16 bg-[#202124] relative z-10">
                 <div className="flex items-center gap-4">
                     <h1 className="text-lg font-medium text-white">{meetingTitle}</h1>
+                    {isHost && <span className="px-2 py-0.5 bg-blue-600 rounded text-xs font-medium">Host</span>}
                 </div>
 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-4">
+                    {/* Waiting Room Toggle Button (Host Only) */}
+                    {isHost && waitingUsers.length > 0 && (
+                        <button
+                            onClick={() => setShowWaitingPanel(!showWaitingPanel)}
+                            className="relative flex items-center gap-2 px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-full text-xs font-medium transition-all"
+                        >
+                            <UserPlus size={14} />
+                            <span>{waitingUsers.length} waiting</span>
+                        </button>
+                    )}
+
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-[#3c4043] rounded-full text-xs font-medium text-white">
                         <Users size={14} className="text-slate-300" />
                         <span>{remoteStreams.size + 1}</span>
                     </div>
                 </div>
             </div>
+
+            {/* Waiting Room Panel (Host Only) */}
+            {isHost && showWaitingPanel && waitingUsers.length > 0 && (
+                <div className="absolute top-20 right-6 z-50 w-80 bg-[#2d2e30] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                        <h3 className="font-semibold text-white">Waiting Room</h3>
+                        <button
+                            onClick={() => setShowWaitingPanel(false)}
+                            className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                        >
+                            <X size={16} className="text-white/60" />
+                        </button>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                        {waitingUsers.map(user => (
+                            <div key={user.socketId} className="flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center text-sm font-medium">
+                                        {user.userName.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span className="text-white text-sm font-medium">{user.userName}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => approveUser(user.socketId)}
+                                        className="p-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-full transition-all"
+                                        title="Admit"
+                                    >
+                                        <Check size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() => rejectUser(user.socketId)}
+                                        className="p-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-full transition-all"
+                                        title="Deny"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Main Video Area */}
             <div className="flex-1 p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr overflow-y-auto">

@@ -81,11 +81,12 @@ export function MeetingLobby() {
         if (localStream) {
             localStream.getTracks().forEach(track => track.stop())
         }
-        // Navigate to live meeting room with state for initial settings
-        navigate(`/meeting/live/${meetingId}`, {
+        // Navigate to waiting room with state for initial settings
+        navigate(`/meeting/waiting/${meetingId}`, {
             state: {
                 initialMuted: isMuted,
-                initialVideoOff: isVideoOff
+                initialVideoOff: isVideoOff,
+                userName: `Guest-${Math.random().toString(36).substring(2, 7)}`
             }
         })
     }
@@ -147,8 +148,8 @@ export function MeetingLobby() {
                         <button
                             onClick={toggleMute}
                             className={`h-12 w-12 rounded-full flex items-center justify-center transition-all ${isMuted
-                                    ? 'bg-[#ea4335] text-white hover:bg-[#d93025]'
-                                    : 'bg-[#3c4043]/80 backdrop-blur text-white hover:bg-[#434649]'
+                                ? 'bg-[#ea4335] text-white hover:bg-[#d93025]'
+                                : 'bg-[#3c4043]/80 backdrop-blur text-white hover:bg-[#434649]'
                                 }`}
                         >
                             {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
@@ -156,8 +157,8 @@ export function MeetingLobby() {
                         <button
                             onClick={toggleVideo}
                             className={`h-12 w-12 rounded-full flex items-center justify-center transition-all ${isVideoOff
-                                    ? 'bg-[#ea4335] text-white hover:bg-[#d93025]'
-                                    : 'bg-[#3c4043]/80 backdrop-blur text-white hover:bg-[#434649]'
+                                ? 'bg-[#ea4335] text-white hover:bg-[#d93025]'
+                                : 'bg-[#3c4043]/80 backdrop-blur text-white hover:bg-[#434649]'
                                 }`}
                         >
                             {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}

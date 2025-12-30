@@ -7,8 +7,8 @@ const getBaseUrl = (): string => {
     if (import.meta.env.VITE_API_URL) {
         return import.meta.env.VITE_API_URL;
     }
-    // Default to localhost for development
-    return 'http://localhost:5000';
+    // Default to ngrok backend
+    return 'https://ka-ichthyologic-talisha.ngrok-free.dev';
 };
 
 export const BASE_URL = getBaseUrl();

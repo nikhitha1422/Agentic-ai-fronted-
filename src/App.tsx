@@ -21,6 +21,7 @@ import { SummaryReady } from './pages/dashboard/SummaryReady'
 import { SmartSummary } from './pages/dashboard/SmartSummary'
 import { MeetingRoom } from './pages/MeetingRoom'
 import { MeetingLobby } from './pages/MeetingLobby'
+import { WaitingRoom } from './pages/WaitingRoom'
 import { Tasks } from './pages/dashboard/Tasks'
 import { Notifications } from './pages/dashboard/Notifications'
 import { Calendar } from './pages/dashboard/Calendar'
@@ -131,6 +132,7 @@ export function App() {
 
         {/* Redirect unknown routes */}
         <Route path="/meet/:meetingId" element={<MeetingLobby />} />
+        <Route path="/meeting/waiting/:meetingId" element={<WaitingRoom />} />
         <Route path="/meeting/live/:meetingId" element={<MeetingRoom />} />
         <Route path="*" element={<div className="p-10 text-center">404 - Page Not Found</div>} />
       </Routes>
