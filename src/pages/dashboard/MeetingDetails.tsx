@@ -6,7 +6,6 @@ import {
   Link as LinkIcon,
   FileText,
   Zap,
-  Upload,
   Loader2
 } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
@@ -28,7 +27,7 @@ export function MeetingDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchMeeting = () => {
     if (!meetingId) return;
     fetch(`${API_URL}/meetings/${meetingId}`)
       .then((res) => {
@@ -44,6 +43,10 @@ export function MeetingDetails() {
         setError('Failed to load meeting details.');
         setLoading(false);
       });
+  }
+
+  useEffect(() => {
+    fetchMeeting();
   }, [meetingId]);
 
   if (loading) {
@@ -79,7 +82,7 @@ export function MeetingDetails() {
               <div className="flex items-center gap-3">
                 <div className={`w-2.5 h-2.5 rounded-full ${meeting.status === 'live' ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
                 <span className={`text-xs font-bold uppercase tracking-wide ${meeting.status === 'live' ? 'text-red-500' : 'text-green-600'}`}>
-                  {meeting.status === 'live' ? 'Live Now' : meeting.status === 'summarized' ? 'Summarized' : 'Scheduled'}
+                  {meeting.status === 'live' ? 'Live Now' : meeting.status === 'summarized' ? 'Summarized' : meeting.status === 'completed' ? 'Completed' : 'Scheduled'}
                 </span>
               </div>
             </div>
@@ -169,25 +172,6 @@ export function MeetingDetails() {
           </div>
           <div className="text-slate-600 leading-relaxed text-lg">
             <p className="whitespace-pre-wrap">{meeting.description || 'No specific agenda provided.'}</p>
-          </div>
-        </div>
-
-        {/* Attachments */}
-        <div className="glass-panel rounded-[2rem] p-10 shadow-sm relative">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-slate-50/50 flex items-center justify-center text-slate-500 backdrop-blur-sm">
-              <Upload size={20} />
-            </div>
-            <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
-              Attachments
-            </h3>
-          </div>
-          <div className="border-2 border-dashed border-slate-200/60 rounded-2xl p-10 text-center hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer">
-            <div className="w-16 h-16 bg-slate-50/50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-400 backdrop-blur-sm">
-              <Upload size={24} />
-            </div>
-            <p className="text-slate-900 font-bold text-lg mb-1">Upload Files</p>
-            <p className="text-slate-500 text-xs font-medium">Documents uploaded here will be used for context.</p>
           </div>
         </div>
       </div>

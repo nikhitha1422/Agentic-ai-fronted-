@@ -8,6 +8,7 @@ import {
   Bell,
   Settings,
   User,
+  Mail,
 } from 'lucide-react'
 
 const menuItems = [
@@ -17,10 +18,16 @@ const menuItems = [
     path: '/dashboard',
   },
   {
+    icon: Mail,
+    label: 'AI Assistant',
+    path: '/dashboard/ai-email-assistant',
+  },
+  {
     icon: Video,
     label: 'Meetings',
     path: '/dashboard/meetings',
   },
+
   {
     icon: Calendar,
     label: 'Calendar',

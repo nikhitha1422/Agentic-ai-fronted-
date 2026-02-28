@@ -18,7 +18,45 @@ export const ChatBot: React.FC<ChatBotProps> = ({ meetingId }) => {
     const [inputText, setInputText] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [summaryStatus, setSummaryStatus] = useState<'loading' | 'ready' | 'none'>('loading');
+    const [meetingTitle, setMeetingTitle] = useState('');
+    const [currentMeetingId, setCurrentMeetingId] = useState(meetingId);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const checkSummary = async () => {
+            if (meetingId) {
+                try {
+                    const res = await fetch(`${API_URL}/meetings/${meetingId}/summary`);
+                    const data = await res.json();
+                    if (data.status === 'ready') {
+                        setSummaryStatus('ready');
+                        setMeetingTitle(data.meetingTitle || 'this meeting');
+                    } else {
+                        setSummaryStatus('none');
+                    }
+                } catch (err) {
+                    setSummaryStatus('none');
+                }
+            } else {
+                // Global mode: fetch latest
+                try {
+                    const res = await fetch(`${API_URL}/meetings/latest/summary`);
+                    const data = await res.json();
+                    if (data.status === 'ready') {
+                        setSummaryStatus('ready');
+                        setMeetingTitle(data.meetingTitle || 'latest meeting');
+                        setCurrentMeetingId(data.meetingId);
+                    } else {
+                        setSummaryStatus('none');
+                    }
+                } catch (err) {
+                    setSummaryStatus('none');
+                }
+            }
+        };
+        checkSummary();
+    }, [meetingId]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -29,7 +67,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ meetingId }) => {
     }, [messages, loading]);
 
     const handleSend = async () => {
-        if (!inputText.trim() || loading) return;
+        if (!inputText.trim() || loading || !currentMeetingId) return;
 
         const userMessage: Message = {
             id: Date.now().toString(),
@@ -49,7 +87,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ meetingId }) => {
                 text: m.text
             }));
 
-            const res = await fetch(`${API_URL}/meetings/${meetingId}/chat`, {
+            const res = await fetch(`${API_URL}/meetings/${currentMeetingId}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -97,7 +135,9 @@ export const ChatBot: React.FC<ChatBotProps> = ({ meetingId }) => {
                     <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 flex items-center justify-between text-white shrink-0">
                         <div>
                             <h3 className="font-bold text-sm">AI Assistant</h3>
-                            <p className="text-xs opacity-90">Ask about this meeting</p>
+                            <p className="text-xs opacity-90">
+                                {meetingId ? `Chatting about ${meetingTitle}` : `Latest: ${meetingTitle}`}
+                            </p>
                         </div>
                         <button
                             onClick={() => setIsOpen(false)}
@@ -111,7 +151,16 @@ export const ChatBot: React.FC<ChatBotProps> = ({ meetingId }) => {
                     <div className="flex-1 overflow-y-auto p-4 bg-slate-50 space-y-4 scrollbar-thin scrollbar-thumb-slate-200">
                         {messages.length === 0 && (
                             <div className="text-center text-slate-500 mt-10 text-sm px-4">
-                                <p>👋 Hi! I can answer questions about the decisions, tasks, and details from this meeting.</p>
+                                {summaryStatus === 'loading' ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Loader2 size={24} className="animate-spin text-blue-500" />
+                                        <p>Waking up Intelligence...</p>
+                                    </div>
+                                ) : summaryStatus === 'none' ? (
+                                    <p>⚠️ No meeting summary found to chat about. Please end a meeting first.</p>
+                                ) : (
+                                    <p>👋 Hi! I can answer questions about the decisions, tasks, and details from <b>{meetingTitle}</b>.</p>
+                                )}
                             </div>
                         )}
 
@@ -122,8 +171,8 @@ export const ChatBot: React.FC<ChatBotProps> = ({ meetingId }) => {
                             >
                                 <div
                                     className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${msg.role === 'user'
-                                            ? 'bg-blue-600 text-white rounded-br-none'
-                                            : 'bg-white text-slate-800 border border-slate-100 rounded-bl-none'
+                                        ? 'bg-blue-600 text-white rounded-br-none'
+                                        : 'bg-white text-slate-800 border border-slate-100 rounded-bl-none'
                                         }`}
                                 >
                                     {msg.text}

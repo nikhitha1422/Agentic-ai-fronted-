@@ -7,7 +7,7 @@ const getBaseUrl = (): string => {
     if (import.meta.env.VITE_API_URL) {
         return import.meta.env.VITE_API_URL;
     }
-    // Default to ngrok backend
+    // Default to public backend tunnel
     return 'https://ka-ichthyologic-talisha.ngrok-free.dev';
 };
 

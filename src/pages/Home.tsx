@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ChevronRight, Shield, Cpu, BarChart3, Globe, CheckCircle2 } from 'lucide-react'
+import { Shield, Cpu, BarChart3, Globe, CheckCircle2 } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 
 export function Home() {
@@ -51,17 +51,26 @@ export function Home() {
             </p>
 
             <div className="flex flex-wrap items-center gap-6">
-              <Link to="/signup">
-                <button className="px-10 py-5 bg-[#4A90E2] text-white rounded-xl font-bold text-lg hover:bg-blue-600 transition-all shadow-lg active:scale-95 animate-heartbeat-glow">
-                  Begin Free Trial
-                </button>
-              </Link>
-              <button className="flex items-center gap-3 text-slate-600 font-bold text-lg hover:text-blue-600 transition-colors group">
-                Watch how it works
-                <div className="w-12 h-12 rounded-full border border-slate-200 flex items-center justify-center group-hover:bg-blue-50 transition-all">
-                  <ChevronRight size={20} />
-                </div>
-              </button>
+              {localStorage.getItem('isLoggedIn') === 'true' ? (
+                <>
+                  <Link to="/dashboard">
+                    <button className="px-10 py-5 bg-[#4A90E2] text-white rounded-xl font-bold text-lg hover:bg-blue-600 transition-all shadow-lg active:scale-95 animate-heartbeat-glow">
+                      Go to Dashboard
+                    </button>
+                  </Link>
+                  <Link to="/dashboard/meetings/new">
+                    <button className="px-10 py-5 border-2 border-[#4A90E2] text-[#4A90E2] rounded-xl font-bold text-lg hover:bg-blue-50 transition-all active:scale-95">
+                      Save Now
+                    </button>
+                  </Link>
+                </>
+              ) : (
+                <Link to="/signup">
+                  <button className="px-10 py-5 bg-[#4A90E2] text-white rounded-xl font-bold text-lg hover:bg-blue-600 transition-all shadow-lg active:scale-95 animate-heartbeat-glow">
+                    Begin Free Trial
+                  </button>
+                </Link>
+              )}
             </div>
           </div>
 
@@ -165,6 +174,13 @@ export function Home() {
           <div className="text-slate-400 text-xs font-medium">
             © 2024 Agentic AI. All rights reserved.
           </div>
+        </div>
+
+        {/* SIMATS Engineering Credit */}
+        <div className="mt-12 pt-8 border-t border-slate-50 text-center">
+          <p className="text-slate-400 text-sm font-semibold tracking-wide">
+            Powered by <span className="text-slate-600">SIMATS Engineering</span>
+          </p>
         </div>
       </footer>
     </main>

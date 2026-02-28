@@ -11,6 +11,8 @@ export function Login() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('userEmail', formData.email);
     navigate('/dashboard')
   }
 

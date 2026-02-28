@@ -43,8 +43,14 @@ export function DashboardNavbar({ pageTitle }: DashboardNavbarProps) {
             />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search meetings..."
               className="w-64 pl-12 pr-4 py-2.5 glass-input rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all text-sm font-medium"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const query = (e.target as HTMLInputElement).value;
+                  window.location.href = `/dashboard/meetings?search=${encodeURIComponent(query)}`;
+                }
+              }}
             />
           </div>
 

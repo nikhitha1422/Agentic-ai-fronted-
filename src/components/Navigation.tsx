@@ -85,12 +85,38 @@ export function Navigation() {
 
         {/* Right Buttons */}
         <div className="flex items-center gap-3">
-          <Link to="/login">
-            <Button variant="text">Login</Button>
-          </Link>
-          <Link to="/signup">
-            <Button variant="primary">Sign Up</Button>
-          </Link>
+          {localStorage.getItem('isLoggedIn') === 'true' || location.pathname.startsWith('/dashboard') ? (
+            <>
+              {location.pathname.startsWith('/dashboard') ? (
+                <Link to="/">
+                  <Button variant="text">Home Site</Button>
+                </Link>
+              ) : (
+                <Link to="/dashboard">
+                  <Button variant="primary">Go to Dashboard</Button>
+                </Link>
+              )}
+              <button
+                onClick={() => {
+                  localStorage.removeItem('isLoggedIn');
+                  localStorage.removeItem('userEmail');
+                  window.location.href = '/';
+                }}
+                className="text-sm font-bold text-red-600 hover:text-red-700 px-4 transition-colors"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button variant="text">Login</Button>
+              </Link>
+              <Link to="/signup">
+                <Button variant="primary">Sign Up</Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </nav>

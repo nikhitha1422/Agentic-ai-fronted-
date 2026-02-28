@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { API_URL } from '../../services/api'
+import { ChatBot } from '../../components/ChatBot'
 
 interface Meeting {
   _id: string;
@@ -217,6 +218,7 @@ export function DashboardHome() {
             </div>
           </div>
         </div>
+        <ChatBot meetingId="" />
       </div>
     </DashboardLayout>
   )

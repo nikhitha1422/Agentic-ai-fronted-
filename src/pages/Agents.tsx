@@ -77,7 +77,7 @@ export function Agents() {
               {[
                 "Extracts action items automatically",
                 "Assigns tasks to team members",
-                "Tracks deadlines and sends reminders",
+                "Tracks deadlines (Future: Background job reminders)",
                 "Monitors project progress"
               ].map((text, i) => (
                 <div key={i} className="flex items-center gap-4">

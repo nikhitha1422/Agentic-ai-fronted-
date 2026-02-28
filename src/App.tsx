@@ -27,6 +27,8 @@ import { Notifications } from './pages/dashboard/Notifications'
 import { Calendar } from './pages/dashboard/Calendar'
 import { Settings } from './pages/dashboard/Settings'
 import { Profile } from './pages/dashboard/Profile'
+import { AIEmailAssistant } from './pages/dashboard/AIEmailAssistant'
+
 
 export function App() {
   return (
@@ -126,6 +128,8 @@ export function App() {
         <Route path="/dashboard/calendar" element={<Calendar />} />
         <Route path="/dashboard/settings" element={<Settings />} />
         <Route path="/dashboard/profile" element={<Profile />} />
+        <Route path="/dashboard/ai-email-assistant" element={<AIEmailAssistant />} />
+
 
         {/* Dashboard Catch-all */}
         <Route path="/dashboard/*" element={<DashboardHome />} />

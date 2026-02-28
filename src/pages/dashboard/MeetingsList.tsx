@@ -18,7 +18,10 @@ export function MeetingsList() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/meetings`)
+    const searchParams = new URLSearchParams(window.location.search);
+    const query = searchParams.get('search') || '';
+
+    fetch(`${API_URL}/meetings${query ? `?query=${encodeURIComponent(query)}` : ''}`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch meetings');
         return res.json();
@@ -32,7 +35,7 @@ export function MeetingsList() {
         setError('Failed to load meetings. Is the backend running?');
         setLoading(false);
       });
-  }, []);
+  }, [window.location.search]);
 
   const formatDate = (isoString?: string) => {
     if (!isoString) return 'N/A';
@@ -130,9 +133,9 @@ export function MeetingsList() {
                       <td className="px-6 py-4">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-bold inline-block border ${meeting.status === 'live' ? 'bg-red-50 border-red-100 text-red-600' :
-                              meeting.status === 'ended' ? 'bg-slate-100 border-slate-200 text-slate-500' :
-                                meeting.status === 'summarized' ? 'bg-green-50 border-green-100 text-green-600' :
-                                  'bg-blue-50 border-blue-100 text-blue-600'
+                            meeting.status === 'ended' ? 'bg-slate-100 border-slate-200 text-slate-500' :
+                              meeting.status === 'summarized' ? 'bg-green-50 border-green-100 text-green-600' :
+                                'bg-blue-50 border-blue-100 text-blue-600'
                             }`}
                         >
                           {meeting.status.charAt(0).toUpperCase() + meeting.status.slice(1)}

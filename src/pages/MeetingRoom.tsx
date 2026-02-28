@@ -17,6 +17,8 @@ const rtcConfig = {
 interface LocationState {
     initialMuted?: boolean;
     initialVideoOff?: boolean;
+    isHost?: boolean;
+    userName?: string;
 }
 
 export function MeetingRoom() {
@@ -36,7 +38,7 @@ export function MeetingRoom() {
     const [hasEnded, setHasEnded] = useState(false)
 
     // Host & Waiting Room state
-    const [isHost, setIsHost] = useState(false)
+    const [isHost, setIsHost] = useState(locationState?.isHost || false)
     const [waitingUsers, setWaitingUsers] = useState<Array<{ socketId: string; userName: string }>>([])
     const [showWaitingPanel, setShowWaitingPanel] = useState(false)
 
@@ -57,10 +59,12 @@ export function MeetingRoom() {
 
     const initializeMeeting = async () => {
         try {
+            console.log('[MeetingRoom] Requesting media devices...');
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: true,
                 audio: true,
             })
+            console.log('[MeetingRoom] Media stream acquired. Audio tracks:', stream.getAudioTracks().length);
             setLocalStream(stream)
             localStreamRef.current = stream
             if (localVideoRef.current) {
@@ -72,7 +76,7 @@ export function MeetingRoom() {
             socketRef.current.emit('join-room', meetingId, userId.current)
 
             socketRef.current.on('all-users', (users: string[]) => {
-                console.log('Existing users in room:', users)
+                console.log('[MeetingRoom] Existing users in room:', users)
                 users.forEach(id => {
                     const pc = createPeerConnection(id)
                     pc.createOffer().then(offer => {
@@ -83,11 +87,11 @@ export function MeetingRoom() {
             })
 
             socketRef.current.on('user-connected', (payload: { userId: string, socketId: string }) => {
-                console.log(`User ${payload.userId} connected with socket ${payload.socketId} `)
+                console.log(`[MeetingRoom] User ${payload.userId} connected with socket ${payload.socketId} `)
             })
 
             socketRef.current.on('offer', async (payload: { offer: RTCSessionDescriptionInit, caller: string }) => {
-                console.log('Received offer from', payload.caller)
+                console.log('[MeetingRoom] Received offer from', payload.caller)
                 const pc = createPeerConnection(payload.caller)
                 await pc.setRemoteDescription(new RTCSessionDescription(payload.offer))
                 const answer = await pc.createAnswer()
@@ -96,7 +100,7 @@ export function MeetingRoom() {
             })
 
             socketRef.current.on('answer', async (payload: { answer: RTCSessionDescriptionInit, caller: string }) => {
-                console.log('Received answer from', payload.caller)
+                console.log('[MeetingRoom] Received answer from', payload.caller)
                 const pc = peerConnections.current.get(payload.caller)
                 if (pc) {
                     await pc.setRemoteDescription(new RTCSessionDescription(payload.answer))
@@ -104,7 +108,7 @@ export function MeetingRoom() {
             })
 
             socketRef.current.on('ice-candidate', async (payload: { candidate: RTCIceCandidateInit, caller: string }) => {
-                console.log('Received ICE candidate from', payload.caller)
+                console.log('[MeetingRoom] Received ICE candidate from', payload.caller)
                 const pc = peerConnections.current.get(payload.caller)
                 if (pc && payload.candidate) {
                     await pc.addIceCandidate(new RTCIceCandidate(payload.candidate))
@@ -132,7 +136,7 @@ export function MeetingRoom() {
                 setWaitingUsers(users)
             })
 
-            console.log(`Joined room ${meetingId} as ${userId.current} `)
+            console.log(`[MeetingRoom] Joined room ${meetingId} as ${userId.current} `)
 
             // Sync meeting status to 'live' on join
             try {
@@ -142,11 +146,13 @@ export function MeetingRoom() {
                     body: JSON.stringify({ meetingId }),
                 });
             } catch (err) {
-                console.error('Failed to sync meeting status to live:', err);
+                console.error('[MeetingRoom] Failed to sync meeting status to live:', err);
             }
 
             if (stream.getAudioTracks().length > 0) {
                 startRecording(stream)
+            } else {
+                console.warn('[MeetingRoom] No audio tracks found in stream. Recording will not start.');
             }
 
             // @ts-ignore
@@ -155,25 +161,41 @@ export function MeetingRoom() {
             }
 
         } catch (err) {
-            console.error('Failed to access media devices:', err)
+            console.error('[MeetingRoom] Failed to access media devices:', err)
             alert('Could not access camera/microphone. Please check permissions.')
         }
     }
 
     const startRecording = (stream: MediaStream) => {
         try {
-            const mimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'];
+            console.log('[MediaRecorder] Initializing...');
+            const mimeTypes = [
+                'video/webm;codecs=vp9,opus',
+                'video/webm;codecs=vp8,opus',
+                'video/webm',
+                'audio/webm;codecs=opus',
+                'audio/webm'
+            ];
             const supportedType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
 
-            if (!supportedType) return;
+            if (!supportedType) {
+                console.error('[MediaRecorder] No supported mime types found for recording.');
+                return;
+            }
 
-            const audioStream = new MediaStream(stream.getAudioTracks());
-            const mediaRecorder = new MediaRecorder(audioStream, { mimeType: supportedType });
+            console.log('[MediaRecorder] Using mimeType:', supportedType);
+
+            const combinedStream = new MediaStream([
+                ...stream.getVideoTracks(),
+                ...stream.getAudioTracks()
+            ]);
+            const mediaRecorder = new MediaRecorder(combinedStream, { mimeType: supportedType });
             mediaRecorderRef.current = mediaRecorder
             audioChunksRef.current = []
 
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data && event.data.size > 0) {
+                    console.log(`[MediaRecorder] Received chunk: ${event.data.size} bytes`);
                     audioChunksRef.current.push(event.data)
                     // We still stream to backend for real-time processing if needed
                     if (socketRef.current) {
@@ -183,41 +205,61 @@ export function MeetingRoom() {
                         })
                     }
                 }
-            }
+            };
+
+            mediaRecorder.onstop = () => {
+                console.log('[MediaRecorder] Recording stopped. Total chunks:', audioChunksRef.current.length);
+            };
 
             mediaRecorder.start(1000)
+            console.log('[MediaRecorder] Started with 1s intervals');
         } catch (e) {
-            console.error('MediaRecorder error:', e)
+            console.error('[MediaRecorder] Initialization error:', e)
         }
     }
 
     const uploadAudio = async () => {
+        console.log('[MeetingRoom] Preparing to upload audio...');
         if (audioChunksRef.current.length === 0) {
             if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                console.log('[MeetingRoom] Recorder still active, requesting data...');
                 mediaRecorderRef.current.requestData();
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
 
-        if (audioChunksRef.current.length === 0) return;
+        if (audioChunksRef.current.length === 0) {
+            console.warn('[MeetingRoom] No audio chunks available for upload.');
+            return;
+        }
 
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        console.log(`[MeetingRoom] Final blob created. Size: ${audioBlob.size} bytes, Type: ${audioBlob.type}`);
+
         const formData = new FormData()
         formData.append('audio', audioBlob, `${meetingId}.webm`)
 
         try {
-            await fetch(`${API_URL}/meetings/${meetingId}/audio`, {
+            const response = await fetch(`${API_URL}/meetings/${meetingId}/audio`, {
                 method: 'POST',
                 body: formData,
             })
+            if (response.ok) {
+                const data = await response.json();
+                console.log('[MeetingRoom] Audio upload successful:', data);
+            } else {
+                console.error('[MeetingRoom] Audio upload failed with status:', response.status);
+            }
         } catch (error: any) {
-            console.error('Error uploading audio:', error)
+            console.error('[MeetingRoom] Error uploading audio:', error)
         }
     }
 
     const startTranscription = () => {
         // @ts-ignore
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+        if (!SpeechRecognition) return;
+
         const recognition = new SpeechRecognition()
         recognition.continuous = true
         recognition.interimResults = true
@@ -279,6 +321,7 @@ export function MeetingRoom() {
     }
 
     const forceStopResources = () => {
+        console.log('[MeetingRoom] Forcing resource cleanup...');
         if (localStreamRef.current) {
             localStreamRef.current.getTracks().forEach(track => track.stop());
             localStreamRef.current = null;
@@ -320,18 +363,40 @@ export function MeetingRoom() {
     const leaveMeeting = async () => {
         setIsProcessing(true);
         setProcessingMessage('Wrapping up...');
-        forceStopResources();
+        console.log('[MeetingRoom] Leave meeting initiated.');
+
+        // 1. Stop Recorder and wait for final blob
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            console.log('[MeetingRoom] Stopping recorder...');
+            mediaRecorderRef.current.stop();
+            // Give a moment for the 'stop' event and potential 'dataavailable' to trigger
+            await new Promise(resolve => setTimeout(resolve, 800));
+        }
+
+        // 2. Upload Audio
+        await uploadAudio();
+
+        // 3. End Meeting in DB
         try {
+            console.log('[MeetingRoom] Marking meeting as ended in DB...');
             await fetch(`${API_URL}/meetings/${meetingId}/end`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
         } catch (err) {
-            console.error('Failed to end meeting:', err);
+            console.error('[MeetingRoom] Failed to end meeting:', err);
         }
-        await uploadAudio();
+
+        // 4. Cleanup other resources
+        forceStopResources();
+
         setIsProcessing(false);
         setHasEnded(true);
+        console.log('[MeetingRoom] Meeting session closed.');
+
+        setTimeout(() => {
+            navigate(`/dashboard/meetings/${meetingId}/summary`);
+        }, 1500);
     }
 
     // Host: Approve a user from waiting room

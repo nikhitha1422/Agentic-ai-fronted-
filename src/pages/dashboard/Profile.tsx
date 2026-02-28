@@ -279,7 +279,10 @@ export function Profile() {
                     type="tel"
                     name="phone"
                     value={editForm?.phone}
-                    onChange={handleEditChange}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      if (editForm) setEditForm({ ...editForm, phone: val });
+                    }}
                     className="glass-input w-full px-3 py-2 rounded-lg text-slate-900 font-semibold text-sm"
                   />
                 ) : (
